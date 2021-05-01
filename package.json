@@ -20,8 +20,10 @@
   },
   "homepage": "https://github.com/Hackathon-Squad/friendbot#readme",
   "dependencies": {
+    "@firebase/firestore-types": "^2.2.0",
     "@typeit/discord": "^4.0.9",
     "discord.js": "^12.5.3",
+    "dotenv": "^8.2.0",
     "firebase": "^8.4.3",
     "moment": "^2.29.1",
     "ts-node": "^9.1.1",

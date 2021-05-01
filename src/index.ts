@@ -1,4 +1,5 @@
 import { Client } from "@typeit/discord"
+import { Config } from './config';
 import * as DB from "./models"
 
 const start = async () => {
@@ -9,7 +10,12 @@ const start = async () => {
     silent: false,
   })
 
-  await client.login('ODM3ODQ3OTQ1NzIxODA2ODU4.YIygtA.TGiN_kR-Opb4YxgbsI1CnCCgILM');
+  await client.login(Config.DISCORD_API_TOKEN);
+  await client.user.setPresence({
+    activity: {
+      name: "🧐 pressing x to doubt"
+    }
+  });
   console.log('Discord bot initialized');
 }
 DB.seed();

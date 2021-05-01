@@ -7,31 +7,49 @@ import {
 	CommandMessage,
 	CommandNotFound,
 	ArgsOf
-} from "@typeit/discord";
+} from '@typeit/discord';
 
-import { NotBot } from "./guards";
+import { NotBot, NotBotMsgReaction } from './guards';
 import { Actions } from '../types/enums';
+import { Messages } from './messages';
+import { SessionService, UserService }from '../services'
+import * as moment from 'moment';
 
-@Discord('/') 
+@Discord('/')
 class DiscordApp {
 
-	@Command('friend session :action')
-	private hello(message: CommandMessage, client: Client) {
-		const { action }: { action: string } = message.args;
-		if (action.toUpperCase() === Actions.START) {
-			// client.channels.cache.get();
-			client.user.dmChannel.send('now i dont ping u lmaoooo')
+	@Command('friend :action')
+	public async handleCommand(message: CommandMessage, client: Client) {
+		let { action }: { action: string } = message.args;
+		action = action.toUpperCase();
+		if (action === Actions.START) {
+			await this.startSession(message);	
 		}
-		message.reply(action);
 	}
 
-	@On('message')
-  @Guard(NotBot)
-	private test([message]: ArgsOf<'message'>, client: Client) {
-		// message.reply('Damn bro');
+	private async startSession(message: CommandMessage) {
+		await this.sendStartSessionMessage(message);
+		const startDate = moment().toDate();
+		const endDate = moment().add(5, 'hours').toDate();
+		await SessionService.startSession(message.guild.id, startDate, endDate, message.id);
+	}
+
+	private async sendStartSessionMessage(message: CommandMessage) {
+		const botMessage = await message.channel.send(Messages.onStartSession());
+		botMessage.react('👋')
+	}
+
+
+	@On('messageReactionAdd')
+	@Guard(NotBotMsgReaction)
+	public async reactionAdded([messageReaction, user]: ArgsOf<'messageReactionAdd'>, client: Client) {
+		user.send(Messages.onReaction(user));
+		console.log(user.id)
+		await UserService.addUser(messageReaction.message.guild.id, user.id)
 	}
 
 	@CommandNotFound()
-	private notFound(message: CommandMessage) {
+	public notFound(message: CommandMessage, client: Client) {
+		message.author.dmChannel.send(Messages.onNonexistantCommand());
 	}
 }

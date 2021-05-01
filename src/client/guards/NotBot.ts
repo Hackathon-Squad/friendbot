@@ -9,3 +9,13 @@ export const NotBot: GuardFunction<"message"> = async (
     await next();
   }
 };
+
+export const NotBotMsgReaction: GuardFunction<"messageReactionAdd"> = async (
+  [,user],
+  client,
+  next
+) => {
+  if (!user.bot) {
+    await next();
+  }
+};
