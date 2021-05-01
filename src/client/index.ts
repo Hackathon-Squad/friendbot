@@ -19,33 +19,67 @@ import * as moment from 'moment';
 class DiscordApp {
 
 	@Command('friend :action')
+	@Guard(NotBot)
 	public async handleCommand(message: CommandMessage, client: Client) {
 		let { action }: { action: string } = message.args;
 		action = action.toUpperCase();
-		if (action === Actions.START) {
-			await this.startSession(message);	
+		switch (action) {
+			case Actions.START : {
+				await this.startSession(message);	
+				break;
+			}
+			case Actions.PAIR : {
+				await this.startMatching(message, client);
+				break;
+			}
 		}
 	}
 
 	private async startSession(message: CommandMessage) {
-		await this.sendStartSessionMessage(message);
+		await this.sendMessage(message, Messages.onStartSession(), '👋');
+		message.delete();
 		const startDate = moment().toDate();
 		const endDate = moment().add(5, 'hours').toDate();
 		await SessionService.startSession(message.guild.id, startDate, endDate, message.id);
 	}
 
-	private async sendStartSessionMessage(message: CommandMessage) {
-		const botMessage = await message.channel.send(Messages.onStartSession());
-		botMessage.react('👋')
+	private async startMatching(message: CommandMessage, client: Client) {
+		await this.sendMessage(message, "Pairing users and sending out messages!");
+		message.delete();
+
+		const matches = await SessionService.pairUsers(message.guild.id);
+
+		for (const match of matches) {
+			for (let i = 0; i < match.schema.users.length; i++) {
+				const userId = match.schema.users[i];
+				const user = await client.users.fetch(userId);
+				const dm = await user.send(`Hi! You've been paired in a group with ${match.schema.users.join(", ").slice(0, -2)} (including yourself). Reach out to them to make new friends!`)
+				match.schema.conversations[i] = dm.id;
+			}
+		}
+
+	}
+
+	private async sendMessage(message: CommandMessage, content: string, reaction: string | null = null) {
+		const botMessage = await message.channel.send(content);
+		if (reaction !== null) {
+			botMessage.react(reaction)
+		}
 	}
 
 
 	@On('messageReactionAdd')
 	@Guard(NotBotMsgReaction)
 	public async reactionAdded([messageReaction, user]: ArgsOf<'messageReactionAdd'>, client: Client) {
-		user.send(Messages.onReaction(user));
-		console.log(user.id)
-		await UserService.addUser(messageReaction.message.guild.id, user.id)
+		// user.send(Messages.onReaction(user));
+		await UserService.addUser(messageReaction.message.guild.id, user.id, user.username)
+	}
+
+	@On('messageReactionRemove')
+	@Guard(NotBotMsgReaction)
+	public async reactionRemoved([messageReaction, user]: ArgsOf<'messageReactionRemove'>, client: Client) {
+		// user.send(Messages.onReaction(user));
+		await UserService.removeUser(messageReaction.message.guild.id, user.id)
 	}
 
 	@CommandNotFound()

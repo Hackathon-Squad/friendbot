@@ -7,6 +7,9 @@ export const Messages = {
   onReaction: (user: User | PartialUser) => {
     return `Welcome to your friend session, ${user.username}!`;
   },
+  onRemoveReaction: (user: User | PartialUser) => {
+    return `We've removed you from the matching session, ${user.username}`
+  },
   onNonexistantCommand: () => {
     return 'Invalid command!'
   }

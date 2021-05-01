@@ -2,9 +2,8 @@ import { BaseModel, Schema } from "./BaseModel"
 import firebase from "./firebase"
 
 interface MatchSchema extends Schema {
-    handle1: string;
-    handle2: string;
-    conversationId: string;
+    users: string[];
+    conversations: string[];
     sessionId: string;
     serverId: string;
 }

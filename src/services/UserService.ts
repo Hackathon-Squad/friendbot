@@ -1,11 +1,11 @@
 import { UserModel, SessionModel } from "../models"
 
 export class UserService {
-	public static async addUser (serverId: string, userId: string) {
+	public static async addUser (serverId: string, userId: string, userName: string) {
 		const session = await SessionModel.fromServerId(serverId);
 
 		const user = await UserModel.fromUserId(userId) ?? new UserModel({
-			handle: userId, 
+			handle: userName, 
 			personalityData: "", 
 			pastMatches: [], 
 			id: userId, 
@@ -34,9 +34,9 @@ export class UserService {
 			sessions: []
 		});
 
-		// user.removeSession(session.schema.id) // TODO
-		// session.removeUser(user.schema.id); // TODO
+		user.removeSession(session.schema.id);
+		session.removeUser(user.schema.id);
 
-		// await Promise.all([session.save(), user.save()]);
+		await Promise.all([session.save(), user.save()]);
 	};
 }

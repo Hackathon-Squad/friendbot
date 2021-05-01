@@ -36,4 +36,8 @@ export class SessionModel extends BaseModel {
 	public addUser(userId: string) {
 		this.schema.users.push(userId);
 	}
+
+	public removeUser(userId: string) {
+		this.schema.users.splice(this.schema.users.indexOf(userId), 1)
+	}
 }
