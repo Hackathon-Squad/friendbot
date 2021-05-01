@@ -1,5 +1,5 @@
 export enum Actions {
-  START = 'START',
+  INIT = 'INIT',
   PAIR = 'PAIR',
-  STOP = 'STOP',
+  DELETE = 'DELETE',
 }

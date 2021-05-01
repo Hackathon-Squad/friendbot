@@ -1,12 +1,7 @@
-import { BaseModel, Schema } from "./BaseModel"
-import firebase from "./firebase"
+import { BaseModel } from "./BaseModel"
+import { MatchSchema } from "./schemas";
 
-interface MatchSchema extends Schema {
-    users: string[];
-    conversations: string[];
-    sessionId: string;
-    serverId: string;
-}
+
 
 export class MatchModel extends BaseModel {
 	public schema: MatchSchema;

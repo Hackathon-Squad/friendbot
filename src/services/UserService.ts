@@ -13,7 +13,7 @@ export class UserService {
 		});
 
 		user.addSession(session.schema.id)
-		session.addUser(user.schema.id);
+		session.addUser(user.schema);
 
 		await Promise.all([session.save(), user.save()]);
 	}
@@ -23,20 +23,7 @@ export class UserService {
 	}
 	
 	// TODO: implement
-	public static async removeUser (serverId: string, userId: string) {
-		const session = await SessionModel.fromServerId(serverId);
-
-		const user = await UserModel.fromUserId(userId) ?? new UserModel({
-			handle: userId, 
-			personalityData: "", 
-			pastMatches: [], 
-			id: userId, 
-			sessions: []
-		});
-
-		user.removeSession(session.schema.id);
-		session.removeUser(user.schema.id);
-
-		await Promise.all([session.save(), user.save()]);
+	public static async removeUserFromSession(serverId: string, userId: string) {
+		
 	};
 }

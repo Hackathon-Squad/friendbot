@@ -1,11 +1,6 @@
-import { DocumentReference } from '@firebase/firestore-types';
-import { BaseModel, Schema } from "./BaseModel"
-import firebase from "./firebase"
+import { BaseModel } from "./BaseModel"
+import { SessionTaskSchema } from './schemas'
 
-interface SessionTaskSchema extends Schema {
-    sessionId: string;
-    timeToRun: Date;
-}
 
 export class SessionTaskModel extends BaseModel {
 	public schema: SessionTaskSchema;

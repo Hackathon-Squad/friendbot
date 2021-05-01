@@ -1,10 +1,7 @@
-import { DocumentReference } from '@firebase/firestore-types';
-import { v4} from "uuid"
-import firebase from "./firebase"
+import { v4 } from "uuid"
+import firebase from "../repositories/firebase"
+import { Schema } from './schemas';
 
-export interface Schema {
-	id?: string;
-}
 
 export abstract class BaseModel {
   public schema: Schema;

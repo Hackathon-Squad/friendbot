@@ -1,15 +1,7 @@
-import { DocumentReference } from '@firebase/firestore-types';
-import { BaseModel, Schema } from "./BaseModel"
-import firebase from "./firebase"
+import { BaseModel } from "./BaseModel"
+import firebase from "../repositories/firebase"
+import { SessionSchema, UserSchema } from './schemas';
 
-interface SessionSchema extends Schema {
-	serverId: string;
-	startDate: Date;
-	endDate: Date;
-	matches: string[];
-	users: string[];
-	messageId: string;
-}
 
 export class SessionModel extends BaseModel {
 	public schema: SessionSchema;
@@ -33,11 +25,12 @@ export class SessionModel extends BaseModel {
 		return new SessionModel(response.docs[0].data() as SessionSchema);
 	}
 
-	public addUser(userId: string) {
-		this.schema.users.push(userId);
+	public addUser(user: UserSchema) {
+		this.schema.users.push(user);
 	}
 
 	public removeUser(userId: string) {
-		this.schema.users.splice(this.schema.users.indexOf(userId), 1)
+		// this.schema.users = this.schema.users
+		// 	.filter((user) => user.schema.id !== userId);
 	}
 }
