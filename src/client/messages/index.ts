@@ -7,8 +7,8 @@ export const Messages = {
   onStartMatching: () => {
     return 'Pairing users and sending out messages!';
   },
-  onReaction: (user: User | PartialUser) => {
-    return `Welcome to your friend session, ${user.username}!`;
+  onReaction: (user: User | PartialUser, serverName: string) => {
+    return `Welcome to ${serverName}'s friend session, ${user.username}!`;
   },
   onRemoveReaction: (user: User | PartialUser) => {
     return `We've removed you from the matching session, ${user.username}`

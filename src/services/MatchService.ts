@@ -1,7 +1,8 @@
-import { MatchModel, SessionModel } from "../models"
+import { SessionRepository } from "../repositories/SessionRepository";
+import { MatchSchema } from "../schemas";
 
 export class MatchService {
-	public static createMatch(model: MatchModel) {
-        
-    }
+	public static async batchWriteMatches(serverId: string, matches: MatchSchema[]) {
+		return SessionRepository.batchAddMatches(serverId, matches);
+	}
 }

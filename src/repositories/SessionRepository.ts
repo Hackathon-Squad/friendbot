@@ -1,5 +1,5 @@
 import firebase from './firebase';
-import { SessionSchema, UserSchema } from '../models/schemas';
+import { MatchSchema, SessionSchema, UserSchema } from '../schemas';
 
 export class SessionRepository {
 	private static readonly path = '/sessions/';
@@ -8,7 +8,7 @@ export class SessionRepository {
 		const response = await firebase.firestore()
 			.doc(SessionRepository.path + serverId)
 			.get();
-		if (!response.exists)
+		if (!response.exists) return null;
     return response.data() as SessionSchema;
 	}
 
@@ -36,6 +36,17 @@ export class SessionRepository {
 			.update({
 				users: firebase.firestore.FieldValue.arrayRemove(user),
 			});
+	}
+
+	public static batchAddMatches(serverId: string, matches: MatchSchema[]) {
+		const batch = firebase.firestore().batch();
+		console.log(matches)
+		matches.forEach((match) => {
+			const sessionRef = firebase.firestore().doc(SessionRepository.path + serverId)
+			batch.update(sessionRef, {
+				matches: firebase.firestore.FieldValue.arrayUnion(match),
+			});
+		})
 	}
 
 

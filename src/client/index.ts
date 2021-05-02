@@ -8,12 +8,14 @@ import {
 	CommandNotFound,
 	ArgsOf
 } from '@typeit/discord';
-
+import { CategoryChannel, GuildMember, TextChannel, User } from 'discord.js';
 import { NotBot, NotBotMsgReaction } from './guards';
 import { Actions } from '../types/enums';
 import { Messages } from './messages';
-import { SessionService, UserService }from '../services'
+import { SessionService } from '../services'
 import * as moment from 'moment';
+import { MatchService } from '../services/MatchService';
+import { UserSchema } from '../schemas';
 
 @Discord('/')
 export class DiscordApp {
@@ -40,7 +42,7 @@ export class DiscordApp {
 	private async initializeSession(message: CommandMessage) {
 		await this.sendMessageToCurrentChannel(message, Messages.onInitializeSession(), '👋');
 		const startDate = moment().toDate();
-		const endDate = moment().add(5, 'hours').toDate();
+		const endDate = moment().add(5, 'hours').toDate();	
 		await SessionService.initializeSession(message.guild.id, startDate, endDate, message.id);
 	}
 
@@ -50,21 +52,64 @@ export class DiscordApp {
 		const botMessage = await message.channel.send(content);
 		if (reaction) botMessage.react(reaction);
 	}
+	
+	private async createCategory(message: CommandMessage, categoryName: string) {
+		let category = message.guild.channels.cache.find(c => c.name == categoryName && c.type == "category") as CategoryChannel;
+		console.log(category);
+		if (!category) {
+			category = await message.guild.channels.create(categoryName, {
+				type: 'category'
+			});
+		} 
+		return category;
+	}
 
 	private async startMatching(message: CommandMessage, client: Client) {
 		await this.sendMessageToCurrentChannel(message, Messages.onStartMatching());
+		const category = await this.createCategory(message, 'Friend matching');
+		const serverId = message.guild.id;
+		const matches = await SessionService.pairUsers(serverId);
+		for (const match of matches) {
+			const conversations: string[] = [];
+			const members = await Promise.all(match.users.map(async (user) => {
+				const discordUser = await client.users.fetch(user.id);
+				const guildMember = category.guild.member(discordUser);
+				return guildMember;
+			}));
 
-		// const matches = await SessionService.pairUsers(message.guild.id);
+			match.conversations = conversations;
+			const channel = await this.createChannelForUsers(category, members, client);
+			
+			const memberPings = members.map((member) => `<@${member.id}>`).join(', ');
+			channel.send(`${memberPings}, welcome to da club`);
+		}
+		await MatchService.batchWriteMatches(serverId, matches);
+	}
 
-		// for (const match of matches) {
-		// 	for (let i = 0; i < match.schema.users.length; i++) {
-		// 		const userId = match.schema.users[i].schema.id;
-		// 		const user = await client.users.fetch(userId);
-		// 		const restOfGroup = match.schema.users.join(", ").slice(0, -2)
-		// 		const dm = await user.send(`Hi! You've been paired in a group with ${restOfGroup} (including yourself). Reach out to them to make new friends!`)
-		// 		match.schema.conversations[i] = dm.id;
-		// 	}
-		// }
+	private async createChannelForUsers(category: CategoryChannel, members: GuildMember[], client: Client) {
+		const guild = category.guild;
+		const channel = await guild.channels.create('friend-channel-1',
+			{
+				permissionOverwrites: [
+					{
+						id: guild.roles.everyone,
+						deny: 'VIEW_CHANNEL',
+					}
+				]
+			}
+			);
+		channel.setParent(category);
+
+		members.forEach((member) => {
+			channel.overwritePermissions([
+				{
+					id: member.id,
+					allow: ['ADD_REACTIONS', 'VIEW_CHANNEL', 'EMBED_LINKS', 'SPEAK', 'SEND_MESSAGES', 'SEND_TTS_MESSAGES'],
+				}
+			]);
+		});
+		
+		return channel;
 	}
 
 	private async removeSession(message: CommandMessage, client: Client) {
@@ -79,15 +124,17 @@ export class DiscordApp {
 	@On('messageReactionAdd')
 	@Guard(NotBotMsgReaction)
 	public async reactionAdded([messageReaction, user]: ArgsOf<'messageReactionAdd'>, client: Client) {
-		// user.send(Messages.onReaction(user));
+		const serverName = messageReaction.message.guild.name;
 		const serverId = messageReaction.message.guild.id;
+		// user.send(Messages.onReaction(user, serverName));
+		
 		await SessionService.addUserToSession(serverId, user);
 	}
 
 	@On('messageReactionRemove')
 	@Guard(NotBotMsgReaction)
 	public async reactionRemoved([messageReaction, user]: ArgsOf<'messageReactionRemove'>, client: Client) {
-		await UserService.removeUserFromSession(messageReaction.message.guild.id, user.id)
+		await SessionService.removeUserFromSession(messageReaction.message.guild.id, user.id)
 	}
 
 	@CommandNotFound()

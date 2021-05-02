@@ -1,6 +1,6 @@
 import { Client } from "@typeit/discord"
 import { Config } from './config';
-import * as DB from "./models"
+// import * as DB from "./models"
 
 const start = async () => {
   const classes = [`${__dirname}/client/*`];
@@ -18,6 +18,6 @@ const start = async () => {
   });
   console.log('Discord bot initialized');
 }
-DB.seed();
+// DB.seed();
 
 start();

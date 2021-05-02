@@ -1,7 +1,13 @@
 import { PartialUser, User } from "discord.js";
+import { MatchSchema } from "src/schemas";
 import { SessionRepository } from "../repositories/SessionRepository";
-import { MatchModel, SessionModel, SessionTaskModel } from "../models"
 
+/**
+ * Splits a list into several lists of size chunkSize
+ * @param list list to split
+ * @param chunkSize the size of lists to split into
+ * @returns array of arrays of size chunkSize
+ */
 const chunk = <E extends unknown>(list: E[], chunkSize: number): E[][] => {
 	return [...Array(Math.ceil(list.length / chunkSize))].map((_, i) => list.slice(i*chunkSize,i*chunkSize+chunkSize));
 }
@@ -14,13 +20,6 @@ export class SessionService {
 			endDate,
 			messageId,
 		});
-
-		// schedules pairing function to run after a period of time
-		// const task = new SessionTaskModel({
-		// 	sessionId: session.schema.id, timeToRun: endDate
-		// });
-
-		// await Promise.all([session.save(), task.save()])
 	}
 
 	public static async findSessionByServerId(serverId: string) {
@@ -45,27 +44,25 @@ export class SessionService {
 
 	
 	// TODO: refactor
-	public static async pairUsers(serverId: string): Promise<MatchModel[]> {
-		const session = await SessionModel.fromServerId(serverId);
-
-		const lastUser = session.schema.users[session.schema.users.length - 1];
-		const isUserCountUneven = session.schema.users.length % 2 !== 0;
-		const pairs = chunk(session.schema.users, 2);
+	public static async pairUsers(serverId: string): Promise<MatchSchema[]> {
+		const session = await SessionRepository.findByServerId(serverId);
+		const lastUser = session.users[session.users.length - 1];
+		const isUserCountUneven = session.users.length % 2 !== 0;
+		const pairs = chunk(session.users, 2);
 		
-		if (isUserCountUneven && pairs.length > 2) {
+		if (isUserCountUneven && pairs.length > 1) {
 			pairs.splice(pairs.length - 1, 1); // remove last user
 			pairs[pairs.length - 1].push(lastUser);
 		}
 
-		const matchObjects: MatchModel[] = [];
+		const matchObjects: MatchSchema[] = [];
 		
 		for (const pair of pairs) {
-			matchObjects.push(new MatchModel({
+			matchObjects.push({
 				users: pair,
-				conversations: [],
-				sessionId: session.schema.id,
-				serverId: serverId
-			}));
+				serverId,
+				sessionId: serverId,
+			});
 		}
 
 		return matchObjects;
