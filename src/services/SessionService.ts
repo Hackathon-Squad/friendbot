@@ -1,16 +1,8 @@
 import { PartialUser, User } from "discord.js";
-import { MatchSchema } from "src/schemas";
+import { MatchSchema } from "../schemas";
+import { getDuplicateUsers } from "../seeds";
 import { SessionRepository } from "../repositories/SessionRepository";
-
-/**
- * Splits a list into several lists of size chunkSize
- * @param list list to split
- * @param chunkSize the size of lists to split into
- * @returns array of arrays of size chunkSize
- */
-const chunk = <E extends unknown>(list: E[], chunkSize: number): E[][] => {
-	return [...Array(Math.ceil(list.length / chunkSize))].map((_, i) => list.slice(i*chunkSize,i*chunkSize+chunkSize));
-}
+import { Utils } from "../utils";
 
 export class SessionService {
 	public static async initializeSession(serverId: string, startDate: Date, endDate: Date, messageId: string) {
@@ -42,13 +34,16 @@ export class SessionService {
 		return SessionRepository.removeUserFromSession(serverId, user);
 	}
 
-	
-	// TODO: refactor
+
 	public static async pairUsers(serverId: string): Promise<MatchSchema[]> {
 		const session = await SessionRepository.findByServerId(serverId);
+		// FIXME: for seeding
+		// session.users = getDuplicateUsers();
+		
+		Utils.shuffleArray(session.users);
 		const lastUser = session.users[session.users.length - 1];
 		const isUserCountUneven = session.users.length % 2 !== 0;
-		const pairs = chunk(session.users, 2);
+		const pairs = Utils.chunkArray(session.users, 2);
 		
 		if (isUserCountUneven && pairs.length > 1) {
 			pairs.splice(pairs.length - 1, 1); // remove last user

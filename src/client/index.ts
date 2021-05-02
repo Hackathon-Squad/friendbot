@@ -8,14 +8,13 @@ import {
 	CommandNotFound,
 	ArgsOf
 } from '@typeit/discord';
-import { CategoryChannel, GuildMember, TextChannel, User } from 'discord.js';
+import { CategoryChannel, GuildMember, MessageEmbed } from 'discord.js';
 import { NotBot, NotBotMsgReaction } from './guards';
-import { Actions } from '../types/enums';
-import { Messages } from './messages';
+import { Actions, HelpEmbedProps } from '../types';
+import { Messages, MessageStruct } from './messages';
 import { SessionService } from '../services'
 import * as moment from 'moment';
 import { MatchService } from '../services/MatchService';
-import { UserSchema } from '../schemas';
 
 @Discord('/')
 export class DiscordApp {
@@ -26,53 +25,82 @@ export class DiscordApp {
 		const action: string = message.args.action.toUpperCase();
 		switch (action) {
 			case Actions.INIT: {
-				await this.initializeSession(message);	
+				await this.initializeSession(message);
 				break;
 			}
 			case Actions.PAIR: {
 				await this.startMatching(message, client);
 				break;
 			}
+			case Actions.STOP: {
+				await this.removeSession(message);
+				break;
+			}
 			case Actions.DELETE: {
-				await this.removeSession(message, client);
+				await this.removeAllBotGeneratedChannels(message);
+				break;
+			}
+			case Actions.HELP: {
+				await this.sendMessageToCurrentChannel(message, Messages.helpMessage());
 				break;
 			}
 		}
 	}
 
 	private async initializeSession(message: CommandMessage) {
+		// check if there is a friend session already, if there is, don't do it and say ('please do /friend stop')
+		const session = await SessionService.findSessionByServerId(message.guild.id);
+		if (session) {
+			this.sendMessageToCurrentChannel(message, Messages.onReinitializeSession());
+			return;
+		}
 		await this.sendMessageToCurrentChannel(message, Messages.onInitializeSession(), '👋');
 		const startDate = moment().toDate();
-		const endDate = moment().add(5, 'hours').toDate();	
+		const endDate = moment().add(5, 'hours').toDate();
 		await SessionService.initializeSession(message.guild.id, startDate, endDate, message.id);
+		await this.removeAllBotGeneratedChannels(message);
 	}
 
-	private async sendMessageToCurrentChannel(message: CommandMessage, content: string, reaction?: string) {
+	private async sendMessageToCurrentChannel(message: CommandMessage, content: MessageStruct, reaction?: string) {
 		// Delete message sent by user to hide spam
 		message.delete();
-		const botMessage = await message.channel.send(content);
+		// const botMessage = await message.channel.send(content);
+
+		const embed = new MessageEmbed()
+			.setTitle(content.title)
+			.setDescription(content.description)
+			.setColor('0xEE8277');
+
+      	const botMessage = await message.channel.send(embed);
+
 		if (reaction) botMessage.react(reaction);
 	}
-	
-	private async createCategory(message: CommandMessage, categoryName: string) {
+
+	private async createCategory(message: CommandMessage, categoryName = 'Friend matching') {
 		let category = message.guild.channels.cache.find(c => c.name == categoryName && c.type == "category") as CategoryChannel;
-		console.log(category);
 		if (!category) {
 			category = await message.guild.channels.create(categoryName, {
 				type: 'category'
 			});
-		} 
+		}
 		return category;
+	}
+
+	private async removeAllBotGeneratedChannels(message: CommandMessage) {
+		const category = message.guild.channels.cache.find(c => c.name == 'Friend matching' && c.type == "category") as CategoryChannel;
+		if (!category) return;
+		await Promise.all(category.children.map(channel => channel.delete("Deleted for new friend session")));
+		await category.delete();
 	}
 
 	private async startMatching(message: CommandMessage, client: Client) {
 		await this.sendMessageToCurrentChannel(message, Messages.onStartMatching());
-		const category = await this.createCategory(message, 'Friend matching');
+		const category = await this.createCategory(message);
 		const serverId = message.guild.id;
 		const matches = await SessionService.pairUsers(serverId);
 		for (let j = 0; j < matches.length; j++) {
 			const match = matches[j];
-			
+
 			const conversations: string[] = [];
 			const members = await Promise.all(match.users.map(async (user) => {
 				const discordUser = await client.users.fetch(user.id);
@@ -82,44 +110,36 @@ export class DiscordApp {
 
 			match.conversations = conversations;
 			const channel = await this.createChannelForUsers(category, members, client, j);
-			
+
 			const memberPings = members.map((member) => `<@${member.id}>`).join(', ');
-			channel.send(`${memberPings}, welcome to da club`);
+			channel.send(Messages.onMatchPair(memberPings));
+			channel.send(Messages.pickConversationInitiator(members));
+			channel.send(Messages.randomConverstationQuestion());
 		}
 		await MatchService.batchWriteMatches(serverId, matches);
 	}
 
 	private async createChannelForUsers(category: CategoryChannel, members: GuildMember[], client: Client, channelNumber: number) {
 		const guild = category.guild;
-		const channel = await guild.channels.create(`friend-channel-${channelNumber}`,
-			{
-				permissionOverwrites: [
-					{
-						id: guild.roles.everyone,
-						deny: ['VIEW_CHANNEL', 'CONNECT', 'SPEAK', 'VIEW_CHANNEL', 'CREATE_INSTANT_INVITE'],
-					}
-				]
-			}
-			);
+		const channel = await guild.channels.create(`friend-channel-${channelNumber}`);
 		await channel.setParent(category);
 
+		// bot permissions		
+		channel.updateOverwrite(client.user.id, { VIEW_CHANNEL: true });
+		channel.updateOverwrite(guild.roles.everyone, { VIEW_CHANNEL: false });
+
 		members.forEach((member) => {
-			channel.overwritePermissions([
-				{
-					id: member.id,
-					allow: ['ADD_REACTIONS', 'VIEW_CHANNEL', 'EMBED_LINKS', 'SPEAK', 'SEND_MESSAGES', 'SEND_TTS_MESSAGES'],
-				}
-			]);
+			channel.updateOverwrite(member.id, { VIEW_CHANNEL: true });
 		});
-		
+
 		return channel;
 	}
 
-	private async removeSession(message: CommandMessage, client: Client) {
+	private async removeSession(message: CommandMessage) {
 		const serverId = message.guild.id;
 		const session = SessionService.findSessionByServerId(serverId);
 		if (session) {
-			this.sendMessageToCurrentChannel(message, 'Your server already has an initialized friend session!');
+			this.sendMessageToCurrentChannel(message, 'Deleting friend session...');
 		}
 		await SessionService.removeSession(serverId);
 	}
@@ -130,7 +150,7 @@ export class DiscordApp {
 		const serverName = messageReaction.message.guild.name;
 		const serverId = messageReaction.message.guild.id;
 		await SessionService.addUserToSession(serverId, user);
-		
+
 		await user.send(Messages.onReaction(user, serverName));
 	}
 
