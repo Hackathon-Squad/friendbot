@@ -1,17 +1,17 @@
 import firebase from 'firebase'
+import { Config } from '../config';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBWoy_Yuy_z2wg9eX-GaYuEU8weoDahrtc",
-    authDomain: "friendbot-discord.firebaseapp.com",
-    projectId: "friendbot-discord",
-    storageBucket: "friendbot-discord.appspot.com",
-    messagingSenderId: "600320604302",
-    appId: "1:600320604302:web:aa0796442c28295103b1df",
-    measurementId: "G-20518RG3T6"
+    apiKey: Config.apiKey,
+    authDomain: Config.authDomain,
+    projectId: Config.projectId,
+    storageBucket: Config.storageBucket,
+    messagingSenderId: Config.messagingSenderId,
+    appId: Config.appId,
+    measurementId: Config.measurementId,
 };
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-// firebase.analytics();
 
 export default firebase;
