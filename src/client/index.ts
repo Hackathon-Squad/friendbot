@@ -33,15 +33,16 @@ export class DiscordApp {
 				break;
 			}
 			case Actions.STOP: {
-				await this.removeSession(message);
-				break;
-			}
-			case Actions.DELETE: {
 				await this.removeAllBotGeneratedChannels(message);
+				await this.removeSession(message);
 				break;
 			}
 			case Actions.HELP: {
 				await this.sendMessageToCurrentChannel(message, Messages.helpMessage());
+				break;
+			}
+			default: {
+				await this.sendMessageToCurrentChannel(message, Messages.helpMessage(true));
 				break;
 			}
 		}
@@ -58,7 +59,7 @@ export class DiscordApp {
 		const startDate = moment().toDate();
 		const endDate = moment().add(5, 'hours').toDate();
 		await SessionService.initializeSession(message.guild.id, startDate, endDate, message.id);
-		await this.removeAllBotGeneratedChannels(message);
+		await this.removeAllBotGeneratedChannels(message, true);
 	}
 
 	private async sendMessageToCurrentChannel(message: CommandMessage, content: MessageStruct, reaction?: string) {
@@ -71,7 +72,7 @@ export class DiscordApp {
 			.setDescription(content.description)
 			.setColor('0xEE8277');
 
-      	const botMessage = await message.channel.send(embed);
+		const botMessage = await message.channel.send(embed);
 
 		if (reaction) botMessage.react(reaction);
 	}
@@ -86,7 +87,10 @@ export class DiscordApp {
 		return category;
 	}
 
-	private async removeAllBotGeneratedChannels(message: CommandMessage) {
+	private async removeAllBotGeneratedChannels(message: CommandMessage, supressMessages = false) {
+		if (!supressMessages) {
+			this.sendMessageToCurrentChannel(message, Messages.onDeleteChannels());
+		}
 		const category = message.guild.channels.cache.find(c => c.name == 'Friend matching' && c.type == "category") as CategoryChannel;
 		if (!category) return;
 		await Promise.all(category.children.map(channel => channel.delete("Deleted for new friend session")));
@@ -112,9 +116,15 @@ export class DiscordApp {
 			const channel = await this.createChannelForUsers(category, members, client, j);
 
 			const memberPings = members.map((member) => `<@${member.id}>`).join(', ');
-			channel.send(Messages.onMatchPair(memberPings));
-			channel.send(Messages.pickConversationInitiator(members));
-			channel.send(Messages.randomConverstationQuestion());
+
+			const embed = new MessageEmbed()
+				.setTitle(Messages.onMatchPairTitle)
+				.setDescription(Messages.onMatchPair(memberPings))
+				.setColor('0xEE8277');
+
+			channel.send(embed);
+			channel.send(Messages.pickConversationInitiator(members))
+			channel.send(Messages.randomConverstationQuestion())
 		}
 		await MatchService.batchWriteMatches(serverId, matches);
 	}
@@ -137,9 +147,9 @@ export class DiscordApp {
 
 	private async removeSession(message: CommandMessage) {
 		const serverId = message.guild.id;
-		const session = SessionService.findSessionByServerId(serverId);
+		const session = await SessionService.findSessionByServerId(serverId);
 		if (session) {
-			this.sendMessageToCurrentChannel(message, 'Deleting friend session...');
+			this.sendMessageToCurrentChannel(message, Messages.onEndFriendSession());
 		}
 		await SessionService.removeSession(serverId);
 	}

@@ -39,7 +39,7 @@ export class SessionService {
 		const session = await SessionRepository.findByServerId(serverId);
 		// FIXME: for seeding
 		// session.users = getDuplicateUsers();
-		
+
 		Utils.shuffleArray(session.users);
 		const lastUser = session.users[session.users.length - 1];
 		const isUserCountUneven = session.users.length % 2 !== 0;
