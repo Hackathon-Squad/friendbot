@@ -40,7 +40,6 @@ export class SessionRepository {
 
 	public static batchAddMatches(serverId: string, matches: MatchSchema[]) {
 		const batch = firebase.firestore().batch();
-		console.log(matches)
 		matches.forEach((match) => {
 			const sessionRef = firebase.firestore().doc(SessionRepository.path + serverId)
 			batch.update(sessionRef, {

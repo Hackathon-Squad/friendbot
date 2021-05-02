@@ -10,6 +10,5 @@ export class DiscordClient {
       message.channel.send(`${message.content.substring(3)}`);
       message.delete();
     }
-    console.log(message.content);
   }
 }
