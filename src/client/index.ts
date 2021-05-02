@@ -157,6 +157,9 @@ export class DiscordApp {
 	@On('messageReactionAdd')
 	@Guard(NotBotMsgReaction)
 	public async reactionAdded([messageReaction, user]: ArgsOf<'messageReactionAdd'>, client: Client) {
+		if (!(messageReaction.message.author.id === client.user.id && messageReaction.message.content.includes(Messages.onInitializeSession().description))) {
+			return;
+		}
 		const serverName = messageReaction.message.guild.name;
 		const serverId = messageReaction.message.guild.id;
 		await SessionService.addUserToSession(serverId, user);
@@ -167,6 +170,9 @@ export class DiscordApp {
 	@On('messageReactionRemove')
 	@Guard(NotBotMsgReaction)
 	public async reactionRemoved([messageReaction, user]: ArgsOf<'messageReactionRemove'>, client: Client) {
+		if (!(messageReaction.message.author.id === client.user.id && messageReaction.message.content.includes(Messages.onInitializeSession().description))) {
+			return;
+		}
 		await SessionService.removeUserFromSession(messageReaction.message.guild.id, user.id)
 		const serverName = messageReaction.message.guild.name;
 
