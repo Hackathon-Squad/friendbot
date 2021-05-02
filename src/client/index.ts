@@ -35,6 +35,7 @@ export class DiscordApp {
 			}
 			case Actions.DELETE: {
 				await this.removeSession(message, client);
+				break;
 			}
 		}
 	}
@@ -69,7 +70,9 @@ export class DiscordApp {
 		const category = await this.createCategory(message, 'Friend matching');
 		const serverId = message.guild.id;
 		const matches = await SessionService.pairUsers(serverId);
-		for (const match of matches) {
+		for (let j = 0; j < matches.length; j++) {
+			const match = matches[j];
+			
 			const conversations: string[] = [];
 			const members = await Promise.all(match.users.map(async (user) => {
 				const discordUser = await client.users.fetch(user.id);
@@ -78,7 +81,7 @@ export class DiscordApp {
 			}));
 
 			match.conversations = conversations;
-			const channel = await this.createChannelForUsers(category, members, client);
+			const channel = await this.createChannelForUsers(category, members, client, j);
 			
 			const memberPings = members.map((member) => `<@${member.id}>`).join(', ');
 			channel.send(`${memberPings}, welcome to da club`);
@@ -86,19 +89,19 @@ export class DiscordApp {
 		await MatchService.batchWriteMatches(serverId, matches);
 	}
 
-	private async createChannelForUsers(category: CategoryChannel, members: GuildMember[], client: Client) {
+	private async createChannelForUsers(category: CategoryChannel, members: GuildMember[], client: Client, channelNumber: number) {
 		const guild = category.guild;
-		const channel = await guild.channels.create('friend-channel-1',
+		const channel = await guild.channels.create(`friend-channel-${channelNumber}`,
 			{
 				permissionOverwrites: [
 					{
 						id: guild.roles.everyone,
-						deny: 'VIEW_CHANNEL',
+						deny: ['VIEW_CHANNEL', 'CONNECT', 'SPEAK', 'VIEW_CHANNEL', 'CREATE_INSTANT_INVITE'],
 					}
 				]
 			}
 			);
-		channel.setParent(category);
+		await channel.setParent(category);
 
 		members.forEach((member) => {
 			channel.overwritePermissions([
@@ -126,15 +129,19 @@ export class DiscordApp {
 	public async reactionAdded([messageReaction, user]: ArgsOf<'messageReactionAdd'>, client: Client) {
 		const serverName = messageReaction.message.guild.name;
 		const serverId = messageReaction.message.guild.id;
-		// user.send(Messages.onReaction(user, serverName));
-		
 		await SessionService.addUserToSession(serverId, user);
+		
+		await user.send(Messages.onReaction(user, serverName));
 	}
 
 	@On('messageReactionRemove')
 	@Guard(NotBotMsgReaction)
 	public async reactionRemoved([messageReaction, user]: ArgsOf<'messageReactionRemove'>, client: Client) {
 		await SessionService.removeUserFromSession(messageReaction.message.guild.id, user.id)
+		const serverName = messageReaction.message.guild.name;
+
+		await user.send(Messages.onRemoveReaction(user, serverName));
+
 	}
 
 	@CommandNotFound()
