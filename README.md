@@ -1,5 +1,5 @@
 # friendbot
-The Discord bot that connects people to foster friendships
+The Discord bot that connects people to foster friendships ([Like us on Devpost](https://devpost.com/software/friendbot)) ([Add to Discord](http://thefriendbot.github.io/))
 
 ![thumbnail](https://user-images.githubusercontent.com/9388431/116831458-5e2cb680-ab64-11eb-8ee1-baba8b9afccc.png)
 
