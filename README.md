@@ -1,6 +1,10 @@
 # friendbot
 The Discord bot that connects people to foster friendships
 
+![thumbnail](https://user-images.githubusercontent.com/9388431/116831458-5e2cb680-ab64-11eb-8ee1-baba8b9afccc.png)
+
+
+
 ## Background 
 As the COVID-19 pandemic brought the world to a standstill and severely limited in-person social events and human interactions, online spaces filled in this void and became the primary places for people to engage in social life and meet others and make connections. Discord, a platform that was once primarily for gamers, became one of the fastest growing spaces where people from any background and interest could chat, have a voice call, and stream movies or video games. However, Discord still was unable to recreate the feeling of spontaneity that is brought by meeting someone entirely new in-person.
 
